@@ -1,0 +1,1794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SORTEX — Premium Sorting Visualizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=JetBrains+Mono:wght@300;400;500;700&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   SASS-LIKE STRUCTURE (compiled inline)
+   Variables → Mixins → Base → Components → Animations
+   ============================================================ */
+
+/* --- Variables --- */
+:root {
+  --obsidian:        #0B0B0B;
+  --obsidian-mid:    #111111;
+  --obsidian-light:  #1A1A1A;
+  --panel-bg:        rgba(20, 18, 14, 0.85);
+  --gold:            #C5A059;
+  --gold-bright:     #E8C47A;
+  --gold-dim:        #7A6035;
+  --gold-glow:       rgba(197, 160, 89, 0.35);
+  --glass-bg:        rgba(255, 255, 255, 0.03);
+  --glass-border:    rgba(197, 160, 89, 0.15);
+  --glass-border-hi: rgba(197, 160, 89, 0.5);
+  --text-primary:    #E8DCC8;
+  --text-secondary:  #8A7A5C;
+  --text-muted:      #4A3F2A;
+  --bar-default:     linear-gradient(180deg, #2A2218 0%, #1A150D 100%);
+  --bar-compare:     linear-gradient(180deg, #E8C47A 0%, #C5A059 40%, #8B6B2A 100%);
+  --bar-swap:        linear-gradient(180deg, #FFE0A0 0%, #E8C47A 30%, #C5A059 100%);
+  --bar-sorted:      linear-gradient(180deg, #D4AF6E 0%, #A07840 40%, #6B5020 100%);
+  --bar-pivot:       linear-gradient(180deg, #FF9060 0%, #CC5522 60%, #882200 100%);
+  --bar-min:         linear-gradient(180deg, #60D0FF 0%, #2288CC 60%, #005588 100%);
+  --success-green:   #4ADE80;
+  --danger-red:      #F87171;
+  --radius-sm:       4px;
+  --radius-md:       8px;
+  --radius-lg:       16px;
+  --transition-fast: 80ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-med:  200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  --font-display:    'Orbitron', monospace;
+  --font-mono:       'JetBrains Mono', monospace;
+  --font-ui:         'Rajdhani', sans-serif;
+}
+
+/* --- Base Reset --- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 14px; scroll-behavior: smooth; }
+
+body {
+  background-color: var(--obsidian);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  min-height: 100vh;
+  overflow-x: hidden;
+  /* Subtle noise texture overlay */
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(197,160,89,0.08) 0%, transparent 70%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.app-wrapper {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* --- Header --- */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--glass-border);
+  position: relative;
+}
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-shadow: 0 0 30px var(--gold-glow), 0 0 60px rgba(197,160,89,0.15);
+}
+.logo span { color: var(--text-secondary); font-weight: 400; font-size: 0.8em; }
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+/* Real-time execution timer */
+.exec-timer {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 20px var(--gold-glow);
+  background: var(--panel-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  position: relative;
+  overflow: hidden;
+}
+.exec-timer::before {
+  content: 'EXEC TIME';
+  display: block;
+  font-size: 0.45em;
+  color: var(--text-muted);
+  letter-spacing: 0.25em;
+  margin-bottom: 2px;
+}
+.exec-timer.running { border-color: var(--glass-border-hi); animation: timer-pulse 2s infinite; }
+
+@keyframes timer-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--gold-glow); }
+  50% { box-shadow: 0 0 0 6px transparent; }
+}
+
+.step-counter {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.step-counter strong { color: var(--gold); font-size: 1.1em; }
+
+/* --- Main Grid --- */
+.main-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr 260px;
+  grid-template-rows: auto 1fr;
+  gap: 16px;
+  padding: 16px 0;
+}
+
+/* ============================================================
+   GLASS PANEL MIXIN (applied as class)
+   ============================================================ */
+.glass-panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+}
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(197,160,89,0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.panel-title {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel-title::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 8px var(--gold);
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   LEFT PANEL — Controls
+   ============================================================ */
+.controls-panel {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.controls-panel .panel-title { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+
+.controls-body { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 20px; }
+
+/* Algorithm selector */
+.algo-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.algo-tab {
+  padding: 10px 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all var(--transition-med);
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+.algo-tab::after {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--gold);
+  transform: scaleY(0);
+  transition: transform var(--transition-med);
+}
+.algo-tab:hover { border-color: var(--gold-dim); color: var(--text-primary); }
+.algo-tab.active {
+  background: rgba(197,160,89,0.08);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.algo-tab.active::after { transform: scaleY(1); }
+
+.algo-tab .complexity {
+  display: block;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.algo-tab.active .complexity { color: var(--gold-dim); }
+
+/* Sliders */
+.control-group { display: flex; flex-direction: column; gap: 8px; }
+.control-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  display: flex;
+  justify-content: space-between;
+}
+.control-label span {
+  font-family: var(--font-mono);
+  color: var(--gold);
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--glass-border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 10px var(--gold-glow);
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+input[type=range]::-webkit-slider-thumb:hover {
+  transform: scale(1.3);
+  box-shadow: 0 0 18px var(--gold-glow);
+}
+input[type=range]::-webkit-slider-runnable-track {
+  background: linear-gradient(90deg, var(--gold) var(--pct, 50%), var(--glass-border) var(--pct, 50%));
+  border-radius: 2px;
+  height: 4px;
+}
+
+/* Action Buttons */
+.btn-group { display: flex; flex-direction: column; gap: 8px; }
+.btn {
+  padding: 11px 16px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-med);
+  position: relative;
+  overflow: hidden;
+}
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.1);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+.btn:hover:not(:disabled)::after { opacity: 1; }
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--gold) 0%, #A07030 100%);
+  color: var(--obsidian);
+  box-shadow: 0 4px 20px rgba(197,160,89,0.3);
+}
+.btn-primary:hover:not(:disabled) { box-shadow: 0 6px 28px rgba(197,160,89,0.5); }
+
+.btn-secondary {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+}
+.btn-secondary:hover:not(:disabled) { border-color: var(--gold-dim); color: var(--text-primary); }
+
+.btn-danger {
+  background: rgba(248,113,113,0.1);
+  border: 1px solid rgba(248,113,113,0.3);
+  color: var(--danger-red);
+}
+
+.btn-autoplay {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-autoplay.active {
+  background: rgba(74,222,128,0.08);
+  border-color: rgba(74,222,128,0.4);
+  color: var(--success-green);
+}
+.btn-autoplay .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.btn-autoplay.active .dot { animation: blink 1s infinite; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* Legend */
+.legend { display: flex; flex-direction: column; gap: 6px; }
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+.legend-swatch {
+  width: 12px; height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   CENTER — Visualizer
+   ============================================================ */
+.visualizer-panel {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+}
+
+.viz-canvas {
+  flex: 1;
+  padding: 24px 20px 12px;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  position: relative;
+  min-height: 360px;
+}
+
+/* Y-axis grid lines */
+.viz-canvas::before {
+  content: '';
+  position: absolute;
+  inset: 24px 20px 12px;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent calc(25% - 1px),
+      rgba(197,160,89,0.05) calc(25% - 1px),
+      rgba(197,160,89,0.05) 25%
+    );
+  pointer-events: none;
+}
+
+.bar-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  position: relative;
+  transition: all var(--transition-med);
+}
+
+.bar {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  background: var(--bar-default);
+  transition: height var(--transition-med), background var(--transition-med);
+  position: relative;
+  min-height: 4px;
+}
+
+.bar-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+/* Bar States */
+.bar.comparing {
+  background: var(--bar-compare) !important;
+  box-shadow: 0 0 12px var(--gold-glow), 0 0 24px rgba(197,160,89,0.2);
+  animation: compare-glow 0.4s ease-out;
+}
+@keyframes compare-glow {
+  0% { box-shadow: 0 0 0 0 var(--gold-glow); }
+  50% { box-shadow: 0 0 20px var(--gold-glow), 0 0 40px rgba(197,160,89,0.3); }
+  100% { box-shadow: 0 0 12px var(--gold-glow), 0 0 24px rgba(197,160,89,0.2); }
+}
+
+.bar.swapping {
+  background: var(--bar-swap) !important;
+  animation: swap-bounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 0 24px rgba(232,196,122,0.6);
+}
+@keyframes swap-bounce {
+  0% { transform: scaleY(1); }
+  30% { transform: scaleY(1.08) scaleX(0.95); }
+  60% { transform: scaleY(0.96) scaleX(1.02); }
+  100% { transform: scaleY(1); }
+}
+
+.bar.pivot {
+  background: var(--bar-pivot) !important;
+  box-shadow: 0 0 16px rgba(255,144,96,0.5);
+  animation: pivot-pulse 1s infinite;
+}
+@keyframes pivot-pulse {
+  0%, 100% { box-shadow: 0 0 16px rgba(255,144,96,0.5); }
+  50% { box-shadow: 0 0 28px rgba(255,144,96,0.8); }
+}
+
+.bar.minimum {
+  background: var(--bar-min) !important;
+  box-shadow: 0 0 14px rgba(96,208,255,0.5);
+}
+
+.bar.sorted {
+  background: var(--bar-sorted) !important;
+  box-shadow: 0 0 10px rgba(197,160,89,0.3);
+}
+.bar.sorted.flash {
+  animation: success-flash 0.6s ease-out;
+}
+@keyframes success-flash {
+  0% { filter: brightness(1); box-shadow: 0 0 0 0 rgba(74,222,128,0.8); }
+  25% { filter: brightness(2.5); box-shadow: 0 0 30px rgba(74,222,128,0.9); }
+  60% { filter: brightness(1.3); box-shadow: 0 0 15px rgba(197,160,89,0.6); }
+  100% { filter: brightness(1); box-shadow: 0 0 10px rgba(197,160,89,0.3); }
+}
+
+/* Index markers */
+.index-markers {
+  display: flex;
+  gap: 3px;
+  padding: 4px 20px 8px;
+}
+.index-marker {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+}
+
+/* Status bar */
+.status-bar {
+  padding: 10px 20px;
+  border-top: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.8rem;
+}
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
+.status-dot.idle { background: var(--text-muted); }
+.status-dot.running { background: var(--gold); box-shadow: 0 0 8px var(--gold); animation: blink 1s infinite; }
+.status-dot.done { background: var(--success-green); box-shadow: 0 0 8px var(--success-green); }
+.status-text { color: var(--text-secondary); font-family: var(--font-mono); font-size: 0.75rem; flex: 1; }
+.status-counts { display: flex; gap: 16px; }
+.stat {
+  display: flex; gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+.stat-label { color: var(--text-muted); }
+.stat-value { color: var(--gold); font-weight: 700; }
+
+/* ============================================================
+   RIGHT PANEL — Variable Tracker
+   ============================================================ */
+.tracker-panel {
+  grid-column: 3;
+  grid-row: 1;
+  max-height: 280px;
+  display: flex;
+  flex-direction: column;
+}
+
+.var-grid {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.var-card {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.var-card.active {
+  border-color: var(--gold);
+  background: rgba(197,160,89,0.06);
+}
+.var-name {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+.var-value {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gold);
+  min-height: 1.4em;
+  transition: color var(--transition-fast);
+}
+.var-value.changed {
+  animation: val-flash 0.4s ease-out;
+}
+@keyframes val-flash {
+  0% { color: #fff; text-shadow: 0 0 20px #fff; }
+  100% { color: var(--gold); text-shadow: none; }
+}
+
+/* ============================================================
+   BOTTOM RIGHT — Action Log
+   ============================================================ */
+.log-panel {
+  grid-column: 3;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.log-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-dim) transparent;
+  max-height: 340px;
+}
+.log-body::-webkit-scrollbar { width: 4px; }
+.log-body::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
+
+.log-entry {
+  display: flex;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: 1.4;
+  animation: log-slide 0.25s ease-out;
+  border: 1px solid transparent;
+}
+@keyframes log-slide {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.log-entry.latest {
+  background: rgba(197,160,89,0.08);
+  border-color: rgba(197,160,89,0.2);
+}
+.log-entry:not(.latest) { opacity: 0.45; }
+
+.log-step {
+  color: var(--gold-dim);
+  flex-shrink: 0;
+  min-width: 36px;
+  font-weight: 700;
+}
+.log-msg { color: var(--text-secondary); }
+.log-msg em { color: var(--gold); font-style: normal; font-weight: 700; }
+.log-msg .swap-tag { color: var(--success-green); }
+.log-msg .no-swap { color: var(--text-muted); }
+.log-msg .sorted-tag { color: var(--success-green); font-weight: 700; }
+.log-msg .pivot-tag { color: #FF9060; }
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.footer {
+  padding: 12px 0;
+  border-top: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+/* Responsive tweaks */
+@media (max-width: 1100px) {
+  .main-grid {
+    grid-template-columns: 240px 1fr 220px;
+  }
+}
+
+/* ============================================================
+   COMPLETION OVERLAY
+   ============================================================ */
+.completion-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+.completion-overlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+.completion-card {
+  background: var(--panel-bg);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius-lg);
+  padding: 40px 56px;
+  text-align: center;
+  box-shadow: 0 0 80px rgba(197,160,89,0.3);
+  animation: card-appear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes card-appear {
+  from { transform: scale(0.8) translateY(20px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+.completion-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--gold);
+  letter-spacing: 0.2em;
+  text-shadow: 0 0 40px var(--gold-glow);
+  margin-bottom: 8px;
+}
+.completion-stats {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 16px 0 28px;
+  line-height: 2;
+}
+.completion-stats strong { color: var(--gold); }
+</style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="logo">SORTEX <span>v2.0</span></div>
+    <div class="header-meta">
+      <div class="exec-timer" id="execTimer">
+        <span id="timerDisplay">00:00.000</span>
+      </div>
+      <div class="step-counter">
+        STEP <strong id="stepDisplay">0</strong>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN GRID -->
+  <main class="main-grid">
+
+    <!-- LEFT: Controls Panel -->
+    <div class="glass-panel controls-panel">
+      <div class="panel-title">Algorithm</div>
+      <div class="controls-body">
+
+        <div class="algo-tabs">
+          <button class="algo-tab active" data-algo="bubble">
+            Bubble Sort
+            <span class="complexity">O(n²) avg · O(n) best</span>
+          </button>
+          <button class="algo-tab" data-algo="selection">
+            Selection Sort
+            <span class="complexity">O(n²) all cases</span>
+          </button>
+          <button class="algo-tab" data-algo="quick">
+            Quick Sort
+            <span class="complexity">O(n log n) avg</span>
+          </button>
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">Array Size <span id="sizeVal">20</span></div>
+          <input type="range" id="sizeSlider" min="6" max="48" value="20" step="1">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">Speed <span id="speedVal">Medium</span></div>
+          <input type="range" id="speedSlider" min="0" max="4" value="2" step="1">
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-primary" id="btnGenerate">⟳ New Array</button>
+          <button class="btn btn-autoplay" id="btnAutoPlay" disabled>
+            <span class="dot"></span> AUTO-PLAY
+          </button>
+          <button class="btn btn-secondary" id="btnNextStep" disabled>NEXT STEP ›</button>
+          <button class="btn btn-danger" id="btnReset" disabled>✕ RESET</button>
+        </div>
+
+        <div>
+          <div class="panel-title" style="padding: 0 0 8px; border: none; font-size: 0.6rem;">Legend</div>
+          <div class="legend">
+            <div class="legend-item">
+              <div class="legend-swatch" style="background: linear-gradient(180deg,#E8C47A,#C5A059);"></div>
+              Comparing
+            </div>
+            <div class="legend-item">
+              <div class="legend-swatch" style="background: linear-gradient(180deg,#FFE0A0,#E8C47A);"></div>
+              Swapping
+            </div>
+            <div class="legend-item">
+              <div class="legend-swatch" style="background: linear-gradient(180deg,#D4AF6E,#6B5020);"></div>
+              Sorted / Locked
+            </div>
+            <div class="legend-item">
+              <div class="legend-swatch" style="background: linear-gradient(180deg,#FF9060,#882200);"></div>
+              Pivot (Quick Sort)
+            </div>
+            <div class="legend-item">
+              <div class="legend-swatch" style="background: linear-gradient(180deg,#60D0FF,#005588);"></div>
+              Current Min (Selection)
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CENTER: Visualizer -->
+    <div class="glass-panel visualizer-panel">
+      <div class="panel-title" id="algoTitle">Bubble Sort</div>
+      <div class="viz-canvas" id="vizCanvas"></div>
+      <div class="index-markers" id="indexMarkers"></div>
+      <div class="status-bar">
+        <div class="status-dot idle" id="statusDot"></div>
+        <div class="status-text" id="statusText">Generate an array to begin.</div>
+        <div class="status-counts">
+          <div class="stat"><span class="stat-label">CMPR</span><span class="stat-value" id="cmpCount">0</span></div>
+          <div class="stat"><span class="stat-label">SWAP</span><span class="stat-value" id="swpCount">0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT TOP: Variable Tracker -->
+    <div class="glass-panel tracker-panel">
+      <div class="panel-title">Variable Tracker</div>
+      <div class="var-grid" id="varGrid">
+        <div class="var-card" id="var-i">
+          <div class="var-name">i (outer)</div>
+          <div class="var-value" id="val-i">—</div>
+        </div>
+        <div class="var-card" id="var-j">
+          <div class="var-name">j (inner)</div>
+          <div class="var-value" id="val-j">—</div>
+        </div>
+        <div class="var-card" id="var-pivot">
+          <div class="var-name">pivot</div>
+          <div class="var-value" id="val-pivot">—</div>
+        </div>
+        <div class="var-card" id="var-minIdx">
+          <div class="var-name">min_idx</div>
+          <div class="var-value" id="val-minIdx">—</div>
+        </div>
+        <div class="var-card" id="var-n">
+          <div class="var-name">n (size)</div>
+          <div class="var-value" id="val-n">—</div>
+        </div>
+        <div class="var-card" id="var-swaps">
+          <div class="var-name">swaps</div>
+          <div class="var-value" id="val-swaps">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT BOTTOM: Action Log -->
+    <div class="glass-panel log-panel">
+      <div class="panel-title">Action Log</div>
+      <div class="log-body" id="logBody">
+        <div class="log-entry latest">
+          <span class="log-step">#0</span>
+          <span class="log-msg">Ready. Generate an array and press <em>AUTO-PLAY</em> or step through manually.</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <span>SORTEX PREMIUM VISUALIZER</span>
+    <span>Step-by-step · Real-time · Educational</span>
+  </footer>
+
+</div>
+
+<!-- COMPLETION OVERLAY -->
+<div class="completion-overlay" id="completionOverlay">
+  <div class="completion-card">
+    <div class="completion-title">SORTED ✓</div>
+    <div class="completion-stats" id="completionStats"></div>
+    <button class="btn btn-primary" onclick="document.getElementById('completionOverlay').classList.remove('visible')">DISMISS</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   SORTEX — Premium Sorting Visualizer
+   Architecture:
+     1. State Manager  – single source of truth
+     2. Renderer       – DOM manipulation, bar states
+     3. Step Generator – algorithm generators (yield-based)
+     4. Executor       – async step runner (auto + manual)
+     5. Timer          – real-time execution clock
+     6. UI Controller  – event bindings
+   ============================================================ */
+
+// ─────────────────────────────────────────────────────────────
+// 1. STATE MANAGER
+// ─────────────────────────────────────────────────────────────
+const State = {
+  array: [],             // current working array (values)
+  sortedIndices: new Set(), // indices confirmed as sorted/locked
+  comparisons: 0,
+  swaps: 0,
+  stepNumber: 0,
+  isRunning: false,
+  isAutoPlay: false,
+  isPaused: false,
+  algorithm: 'bubble',
+  arraySize: 20,
+  speed: 2,              // 0=fastest … 4=slowest
+  stepQueue: [],         // queued step objects from generator
+  generatorInstance: null,
+  vars: { i: null, j: null, pivot: null, minIdx: null, n: null, swaps: 0 },
+};
+
+// Speed → delay (ms). 0 = fastest, 4 = slowest.
+const SPEED_MAP = [30, 120, 280, 550, 1100];
+const SPEED_LABELS = ['Fastest', 'Fast', 'Medium', 'Slow', 'Slowest'];
+
+// ─────────────────────────────────────────────────────────────
+// 2. RENDERER
+// ─────────────────────────────────────────────────────────────
+const Renderer = (() => {
+  const canvas = document.getElementById('vizCanvas');
+  const indexRow = document.getElementById('indexMarkers');
+  let barEls = []; // cached DOM bar elements
+
+  /** Build bar DOM from scratch */
+  function buildBars(arr) {
+    canvas.innerHTML = '';
+    indexRow.innerHTML = '';
+    barEls = [];
+
+    const max = Math.max(...arr);
+
+    arr.forEach((val, idx) => {
+      // Wrapper
+      const wrapper = document.createElement('div');
+      wrapper.className = 'bar-wrapper';
+
+      // Bar
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      const pct = (val / max) * 100;
+      bar.style.height = `${pct}%`;
+      bar.dataset.val = val;
+      bar.dataset.idx = idx;
+
+      // Value label (only show if array small enough)
+      const label = document.createElement('div');
+      label.className = 'bar-label';
+      label.textContent = arr.length <= 30 ? val : '';
+
+      wrapper.appendChild(bar);
+      wrapper.appendChild(label);
+      canvas.appendChild(wrapper);
+      barEls.push(bar);
+
+      // Index label
+      const idxEl = document.createElement('div');
+      idxEl.className = 'index-marker';
+      idxEl.textContent = arr.length <= 30 ? idx : (idx % 5 === 0 ? idx : '');
+      indexRow.appendChild(idxEl);
+    });
+  }
+
+  /**
+   * Apply a visual state to a set of bar indices.
+   * @param {number[]} indices  – bar positions to highlight
+   * @param {string}   state    – 'comparing' | 'swapping' | 'sorted' | 'pivot' | 'minimum' | 'default'
+   */
+  function setBarStates(indices, state) {
+    // First, reset non-sorted bars to default
+    barEls.forEach((bar, idx) => {
+      if (!State.sortedIndices.has(idx)) {
+        bar.className = 'bar';
+      }
+    });
+
+    // Apply requested state
+    indices.forEach(idx => {
+      if (idx < 0 || idx >= barEls.length) return;
+      const bar = barEls[idx];
+      if (state === 'sorted') {
+        // Lock it permanently
+        State.sortedIndices.add(idx);
+        bar.className = 'bar sorted flash';
+        // Remove flash class after animation completes so it can re-trigger
+        setTimeout(() => { bar.classList.remove('flash'); }, 650);
+      } else {
+        if (!State.sortedIndices.has(idx)) {
+          bar.className = `bar ${state}`;
+        }
+      }
+    });
+  }
+
+  /**
+   * Update the height (value) of a bar at a given index.
+   * Called after a swap to reflect the new value visually.
+   */
+  function updateBarValue(idx, newVal) {
+    const max = Math.max(...State.array);
+    const pct = (newVal / max) * 100;
+    const bar = barEls[idx];
+    if (!bar) return;
+    bar.style.height = `${pct}%`;
+    bar.dataset.val = newVal;
+    bar.parentElement.querySelector('.bar-label').textContent =
+      State.array.length <= 30 ? newVal : '';
+  }
+
+  /** Reset all bars to default appearance (except locked sorted ones) */
+  function resetVisuals() {
+    barEls.forEach((bar, idx) => {
+      bar.className = State.sortedIndices.has(idx) ? 'bar sorted' : 'bar';
+    });
+  }
+
+  /** Flash sorted bars one final time on completion */
+  function celebrateSorted() {
+    barEls.forEach((bar, idx) => {
+      setTimeout(() => {
+        bar.className = 'bar sorted flash';
+        setTimeout(() => bar.classList.remove('flash'), 700);
+      }, idx * 18);
+    });
+  }
+
+  return { buildBars, setBarStates, updateBarValue, resetVisuals, celebrateSorted };
+})();
+
+// ─────────────────────────────────────────────────────────────
+// 3. STEP GENERATORS — Pure JavaScript generators.
+//    Each yield produces a StepObject:
+//    {
+//      type: 'compare' | 'swap' | 'sorted' | 'pivot-set' | 'done',
+//      indices: [i, j, ...],
+//      vars: { i, j, pivot, minIdx, n, swaps },
+//      log: HTML string describing the micro-step,
+//      swapPair: [a, b]  ← only for swap type
+//    }
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * BUBBLE SORT Generator
+ * Classic O(n²): compare adjacent pairs, bubble largest to end.
+ */
+function* bubbleSortGen(arr) {
+  const n = arr.length;
+  let totalSwaps = 0;
+
+  for (let i = 0; i < n - 1; i++) {
+    let swappedThisPass = false;
+
+    for (let j = 0; j < n - 1 - i; j++) {
+      // Step: comparison
+      yield {
+        type: 'compare',
+        indices: [j, j + 1],
+        vars: { i, j, pivot: null, minIdx: null, n, swaps: totalSwaps },
+        log: `Comparing index <em>${j}</em> (val <em>${arr[j]}</em>) vs index <em>${j+1}</em> (val <em>${arr[j+1]}</em>)`
+      };
+
+      if (arr[j] > arr[j + 1]) {
+        // Step: swap
+        [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+        totalSwaps++;
+        swappedThisPass = true;
+        yield {
+          type: 'swap',
+          indices: [j, j + 1],
+          swapPair: [j, j + 1],
+          vars: { i, j, pivot: null, minIdx: null, n, swaps: totalSwaps },
+          log: `<span class="swap-tag">SWAP</span> — <em>${arr[j+1]}</em> &gt; <em>${arr[j]}</em>, swapping positions <em>${j}</em> ↔ <em>${j+1}</em>`
+        };
+      } else {
+        yield {
+          type: 'no-swap',
+          indices: [j, j + 1],
+          vars: { i, j, pivot: null, minIdx: null, n, swaps: totalSwaps },
+          log: `<span class="no-swap">No swap</span> — <em>${arr[j]}</em> ≤ <em>${arr[j+1]}</em>, order is correct`
+        };
+      }
+    }
+
+    // Lock the last element of this pass — it's in final position
+    yield {
+      type: 'sorted',
+      indices: [n - 1 - i],
+      vars: { i, j: n - 1 - i, pivot: null, minIdx: null, n, swaps: totalSwaps },
+      log: `<span class="sorted-tag">LOCKED</span> — Index <em>${n-1-i}</em> (val <em>${arr[n-1-i]}</em>) is in its final position`
+    };
+
+    // Early exit optimisation: if no swaps occurred, array is already sorted
+    if (!swappedThisPass) {
+      // Mark all remaining as sorted
+      for (let k = 0; k < n - 1 - i; k++) {
+        yield {
+          type: 'sorted',
+          indices: [k],
+          vars: { i, j: k, pivot: null, minIdx: null, n, swaps: totalSwaps },
+          log: `<span class="sorted-tag">LOCKED</span> — Early exit! Index <em>${k}</em> already in place`
+        };
+      }
+      break;
+    }
+  }
+
+  // Lock index 0 (last remaining)
+  if (!State.sortedIndices.has(0)) {
+    yield {
+      type: 'sorted',
+      indices: [0],
+      vars: { i: 0, j: 0, pivot: null, minIdx: null, n, swaps: totalSwaps },
+      log: `<span class="sorted-tag">LOCKED</span> — Index <em>0</em> (val <em>${arr[0]}</em>) — all elements sorted!`
+    };
+  }
+
+  yield { type: 'done', vars: { i: null, j: null, pivot: null, minIdx: null, n, swaps: totalSwaps }, log: 'Sort complete!' };
+}
+
+/**
+ * SELECTION SORT Generator
+ * O(n²): find minimum in unsorted portion, swap with front.
+ */
+function* selectionSortGen(arr) {
+  const n = arr.length;
+  let totalSwaps = 0;
+
+  for (let i = 0; i < n - 1; i++) {
+    let minIdx = i;
+
+    yield {
+      type: 'compare',
+      indices: [i],
+      vars: { i, j: i, pivot: null, minIdx, n, swaps: totalSwaps },
+      log: `Pass <em>${i}</em>: Assuming index <em>${i}</em> (val <em>${arr[i]}</em>) is the minimum`
+    };
+
+    for (let j = i + 1; j < n; j++) {
+      yield {
+        type: 'compare',
+        indices: [j, minIdx],
+        vars: { i, j, pivot: null, minIdx, n, swaps: totalSwaps },
+        log: `Checking index <em>${j}</em> (val <em>${arr[j]}</em>) vs current min index <em>${minIdx}</em> (val <em>${arr[minIdx]}</em>)`
+      };
+
+      if (arr[j] < arr[minIdx]) {
+        minIdx = j;
+        yield {
+          type: 'minimum',
+          indices: [minIdx],
+          vars: { i, j, pivot: null, minIdx, n, swaps: totalSwaps },
+          log: `New minimum found at index <em>${minIdx}</em> (val <em>${arr[minIdx]}</em>)`
+        };
+      } else {
+        yield {
+          type: 'no-swap',
+          indices: [j, minIdx],
+          vars: { i, j, pivot: null, minIdx, n, swaps: totalSwaps },
+          log: `<span class="no-swap">Not smaller</span> — <em>${arr[j]}</em> ≥ <em>${arr[minIdx]}</em>, min stays at index <em>${minIdx}</em>`
+        };
+      }
+    }
+
+    if (minIdx !== i) {
+      [arr[i], arr[minIdx]] = [arr[minIdx], arr[i]];
+      totalSwaps++;
+      yield {
+        type: 'swap',
+        indices: [i, minIdx],
+        swapPair: [i, minIdx],
+        vars: { i, j: minIdx, pivot: null, minIdx, n, swaps: totalSwaps },
+        log: `<span class="swap-tag">SWAP</span> — Moving minimum <em>${arr[i]}</em> from index <em>${minIdx}</em> to index <em>${i}</em>`
+      };
+    } else {
+      yield {
+        type: 'no-swap',
+        indices: [i],
+        vars: { i, j: i, pivot: null, minIdx, n, swaps: totalSwaps },
+        log: `<span class="no-swap">No swap needed</span> — Index <em>${i}</em> is already the minimum`
+      };
+    }
+
+    yield {
+      type: 'sorted',
+      indices: [i],
+      vars: { i, j: null, pivot: null, minIdx: null, n, swaps: totalSwaps },
+      log: `<span class="sorted-tag">LOCKED</span> — Index <em>${i}</em> (val <em>${arr[i]}</em>) placed in final position`
+    };
+  }
+
+  // Lock last element
+  yield {
+    type: 'sorted',
+    indices: [n - 1],
+    vars: { i: n-1, j: null, pivot: null, minIdx: null, n, swaps: totalSwaps },
+    log: `<span class="sorted-tag">LOCKED</span> — Index <em>${n-1}</em> (val <em>${arr[n-1]}</em>) — all sorted!`
+  };
+
+  yield { type: 'done', vars: { i: null, j: null, pivot: null, minIdx: null, n, swaps: totalSwaps }, log: 'Sort complete!' };
+}
+
+/**
+ * QUICK SORT Generator — Iterative with explicit stack (avoids recursion issues with generators).
+ * Lomuto partition scheme.
+ */
+function* quickSortGen(arr) {
+  const n = arr.length;
+  let totalSwaps = 0;
+  const stack = [[0, n - 1]]; // [low, high] pairs
+
+  while (stack.length > 0) {
+    const [low, high] = stack.pop();
+    if (low >= high) {
+      if (low === high && !State.sortedIndices.has(low)) {
+        yield {
+          type: 'sorted',
+          indices: [low],
+          vars: { i: low, j: high, pivot: arr[low], minIdx: null, n, swaps: totalSwaps },
+          log: `<span class="sorted-tag">LOCKED</span> — Index <em>${low}</em> is a single element, already in place`
+        };
+      }
+      continue;
+    }
+
+    // Lomuto partition: pivot = last element
+    const pivotVal = arr[high];
+    yield {
+      type: 'pivot-set',
+      indices: [high],
+      vars: { i: low, j: high, pivot: pivotVal, minIdx: null, n, swaps: totalSwaps },
+      log: `<span class="pivot-tag">PIVOT</span> — Selected index <em>${high}</em> (val <em>${pivotVal}</em>) as pivot for range [<em>${low}</em>…<em>${high}</em>]`
+    };
+
+    let partIdx = low - 1;
+
+    for (let j = low; j < high; j++) {
+      yield {
+        type: 'compare',
+        indices: [j, high],
+        vars: { i: partIdx, j, pivot: pivotVal, minIdx: null, n, swaps: totalSwaps },
+        log: `Comparing index <em>${j}</em> (val <em>${arr[j]}</em>) with pivot <em>${pivotVal}</em>`
+      };
+
+      if (arr[j] <= pivotVal) {
+        partIdx++;
+        if (partIdx !== j) {
+          [arr[partIdx], arr[j]] = [arr[j], arr[partIdx]];
+          totalSwaps++;
+          yield {
+            type: 'swap',
+            indices: [partIdx, j],
+            swapPair: [partIdx, j],
+            vars: { i: partIdx, j, pivot: pivotVal, minIdx: null, n, swaps: totalSwaps },
+            log: `<span class="swap-tag">SWAP</span> — <em>${arr[j]}</em> ≤ pivot; swapping index <em>${partIdx}</em> ↔ <em>${j}</em>`
+          };
+        } else {
+          yield {
+            type: 'no-swap',
+            indices: [j],
+            vars: { i: partIdx, j, pivot: pivotVal, minIdx: null, n, swaps: totalSwaps },
+            log: `<span class="no-swap">Partition advance</span> — <em>${arr[j]}</em> ≤ pivot, already in left partition`
+          };
+        }
+      } else {
+        yield {
+          type: 'no-swap',
+          indices: [j, high],
+          vars: { i: partIdx, j, pivot: pivotVal, minIdx: null, n, swaps: totalSwaps },
+          log: `<span class="no-swap">Skip</span> — <em>${arr[j]}</em> &gt; pivot <em>${pivotVal}</em>, stays in right partition`
+        };
+      }
+    }
+
+    // Place pivot in its correct position
+    const pivotFinal = partIdx + 1;
+    if (pivotFinal !== high) {
+      [arr[pivotFinal], arr[high]] = [arr[high], arr[pivotFinal]];
+      totalSwaps++;
+      yield {
+        type: 'swap',
+        indices: [pivotFinal, high],
+        swapPair: [pivotFinal, high],
+        vars: { i: partIdx, j: high, pivot: pivotVal, minIdx: null, n, swaps: totalSwaps },
+        log: `<span class="swap-tag">PLACE PIVOT</span> — Moving pivot <em>${arr[pivotFinal]}</em> to final position at index <em>${pivotFinal}</em>`
+      };
+    }
+
+    yield {
+      type: 'sorted',
+      indices: [pivotFinal],
+      vars: { i: pivotFinal, j: null, pivot: null, minIdx: null, n, swaps: totalSwaps },
+      log: `<span class="sorted-tag">LOCKED</span> — Pivot <em>${arr[pivotFinal]}</em> is at its final index <em>${pivotFinal}</em>`
+    };
+
+    // Push sub-arrays onto stack (smaller first for better balance)
+    if (pivotFinal - 1 > low) stack.push([low, pivotFinal - 1]);
+    if (pivotFinal + 1 < high) stack.push([pivotFinal + 1, high]);
+  }
+
+  // Lock any remaining
+  for (let k = 0; k < n; k++) {
+    if (!State.sortedIndices.has(k)) {
+      yield {
+        type: 'sorted',
+        indices: [k],
+        vars: { i: k, j: null, pivot: null, minIdx: null, n, swaps: totalSwaps },
+        log: `<span class="sorted-tag">LOCKED</span> — Index <em>${k}</em> confirmed in place`
+      };
+    }
+  }
+
+  yield { type: 'done', vars: { i: null, j: null, pivot: null, minIdx: null, n, swaps: totalSwaps }, log: 'Sort complete!' };
+}
+
+// ─────────────────────────────────────────────────────────────
+// 4. EXECUTOR — processes one step at a time
+// ─────────────────────────────────────────────────────────────
+const Executor = (() => {
+  let autoPlayInterval = null;
+
+  /** Process one step from the generator. Returns false when done. */
+  function processStep() {
+    if (!State.generatorInstance) return false;
+
+    const result = State.generatorInstance.next();
+    if (result.done) return false;
+
+    const step = result.value;
+    State.stepNumber++;
+    document.getElementById('stepDisplay').textContent = State.stepNumber;
+
+    // Update vars
+    if (step.vars) {
+      const prev = { ...State.vars };
+      State.vars = { ...step.vars };
+      updateVarTracker(State.vars, prev);
+    }
+
+    // Apply visual state
+    switch (step.type) {
+      case 'compare':
+        Renderer.setBarStates(step.indices, 'comparing');
+        State.comparisons++;
+        document.getElementById('cmpCount').textContent = State.comparisons;
+        break;
+      case 'swap':
+        Renderer.setBarStates(step.indices, 'swapping');
+        // Reflect swap in array state & DOM
+        if (step.swapPair) {
+          const [a, b] = step.swapPair;
+          Renderer.updateBarValue(a, State.array[a]);
+          Renderer.updateBarValue(b, State.array[b]);
+        }
+        State.swaps++;
+        document.getElementById('swpCount').textContent = State.swaps;
+        break;
+      case 'no-swap':
+        Renderer.setBarStates(step.indices, 'comparing');
+        State.comparisons++;
+        document.getElementById('cmpCount').textContent = State.comparisons;
+        break;
+      case 'sorted':
+        step.indices.forEach(idx => Renderer.setBarStates([idx], 'sorted'));
+        break;
+      case 'minimum':
+        Renderer.setBarStates(step.indices, 'minimum');
+        break;
+      case 'pivot-set':
+        Renderer.setBarStates(step.indices, 'pivot');
+        break;
+      case 'done':
+        finishSort();
+        return false;
+    }
+
+    // Log the step
+    addLogEntry(State.stepNumber, step.log);
+
+    return true;
+  }
+
+  function finishSort() {
+    Timer.stop();
+    State.isRunning = false;
+    State.isAutoPlay = false;
+    clearAutoPlay();
+
+    // Ensure all bars locked
+    State.sortedIndices.clear();
+    State.array.forEach((_, idx) => State.sortedIndices.add(idx));
+    Renderer.celebrateSorted();
+
+    setStatus('done', 'Array fully sorted!');
+    UI.setButtonStates('done');
+
+    // Show completion card
+    const elapsed = Timer.getElapsed();
+    document.getElementById('completionStats').innerHTML =
+      `Algorithm: <strong>${State.algorithm.charAt(0).toUpperCase() + State.algorithm.slice(1)} Sort</strong><br>
+       Steps: <strong>${State.stepNumber}</strong> &nbsp;|&nbsp;
+       Comparisons: <strong>${State.comparisons}</strong> &nbsp;|&nbsp;
+       Swaps: <strong>${State.swaps}</strong><br>
+       Time: <strong>${elapsed}</strong>`;
+    setTimeout(() => {
+      document.getElementById('completionOverlay').classList.add('visible');
+    }, 700);
+  }
+
+  function startAutoPlay() {
+    if (autoPlayInterval) return;
+    const delay = SPEED_MAP[State.speed];
+    autoPlayInterval = setInterval(() => {
+      if (!processStep()) {
+        clearAutoPlay();
+      }
+    }, delay);
+  }
+
+  function clearAutoPlay() {
+    if (autoPlayInterval) {
+      clearInterval(autoPlayInterval);
+      autoPlayInterval = null;
+    }
+    State.isAutoPlay = false;
+    document.getElementById('btnAutoPlay').classList.remove('active');
+    document.getElementById('btnAutoPlay').innerHTML = '<span class="dot"></span> AUTO-PLAY';
+  }
+
+  function toggleAutoPlay() {
+    if (!State.isRunning) return;
+    if (State.isAutoPlay) {
+      clearAutoPlay();
+    } else {
+      State.isAutoPlay = true;
+      document.getElementById('btnAutoPlay').classList.add('active');
+      document.getElementById('btnAutoPlay').innerHTML = '<span class="dot"></span> PAUSE';
+      startAutoPlay();
+    }
+  }
+
+  return { processStep, startAutoPlay, clearAutoPlay, toggleAutoPlay };
+})();
+
+// ─────────────────────────────────────────────────────────────
+// 5. TIMER — real-time execution clock
+// ─────────────────────────────────────────────────────────────
+const Timer = (() => {
+  let startTime = null;
+  let elapsed = 0;
+  let rafId = null;
+  const el = document.getElementById('timerDisplay');
+  const wrapper = document.getElementById('execTimer');
+
+  function format(ms) {
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    const millis = Math.floor(ms % 1000);
+    return `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}.${String(millis).padStart(3,'0')}`;
+  }
+
+  function tick() {
+    elapsed = Date.now() - startTime;
+    el.textContent = format(elapsed);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function start() {
+    if (rafId) return;
+    startTime = Date.now() - elapsed;
+    wrapper.classList.add('running');
+    tick();
+  }
+
+  function stop() {
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+    wrapper.classList.remove('running');
+  }
+
+  function reset() {
+    stop();
+    elapsed = 0;
+    el.textContent = '00:00.000';
+  }
+
+  function getElapsed() {
+    return el.textContent;
+  }
+
+  return { start, stop, reset, getElapsed };
+})();
+
+// ─────────────────────────────────────────────────────────────
+// 6. UI HELPERS
+// ─────────────────────────────────────────────────────────────
+
+/** Update the Variable Tracker panel */
+function updateVarTracker(vars, prevVars) {
+  const map = [
+    ['i', 'val-i', 'var-i'],
+    ['j', 'val-j', 'var-j'],
+    ['pivot', 'val-pivot', 'var-pivot'],
+    ['minIdx', 'val-minIdx', 'var-minIdx'],
+    ['n', 'val-n', 'var-n'],
+    ['swaps', 'val-swaps', 'var-swaps'],
+  ];
+
+  map.forEach(([key, valId, cardId]) => {
+    const el = document.getElementById(valId);
+    const card = document.getElementById(cardId);
+    const newVal = vars[key];
+    const displayVal = newVal === null ? '—' : String(newVal);
+    const changed = newVal !== (prevVars ? prevVars[key] : null) && newVal !== null;
+
+    el.textContent = displayVal;
+    card.classList.toggle('active', newVal !== null);
+
+    if (changed) {
+      el.classList.remove('changed');
+      void el.offsetWidth; // reflow to restart animation
+      el.classList.add('changed');
+    }
+  });
+}
+
+/** Add entry to the action log */
+function addLogEntry(step, msg) {
+  const body = document.getElementById('logBody');
+
+  // Remove 'latest' from previous entry
+  const prev = body.querySelector('.log-entry.latest');
+  if (prev) prev.classList.remove('latest');
+
+  const entry = document.createElement('div');
+  entry.className = 'log-entry latest';
+  entry.innerHTML = `<span class="log-step">#${step}</span><span class="log-msg">${msg}</span>`;
+  body.appendChild(entry);
+
+  // Auto-scroll to bottom
+  body.scrollTop = body.scrollHeight;
+
+  // Trim old entries if too many (keep last 80)
+  while (body.children.length > 80) {
+    body.removeChild(body.firstChild);
+  }
+}
+
+/** Update status bar */
+function setStatus(state, msg) {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  dot.className = `status-dot ${state}`;
+  txt.textContent = msg;
+}
+
+/** Update the algorithm title in the visualizer panel */
+function updateAlgoTitle() {
+  const titles = { bubble: 'Bubble Sort', selection: 'Selection Sort', quick: 'Quick Sort' };
+  document.getElementById('algoTitle').textContent = titles[State.algorithm] || State.algorithm;
+}
+
+// ─────────────────────────────────────────────────────────────
+// UI CONTROLLER
+// ─────────────────────────────────────────────────────────────
+const UI = (() => {
+
+  function setButtonStates(mode) {
+    // mode: 'ready' | 'running' | 'done'
+    const btnGen    = document.getElementById('btnGenerate');
+    const btnAuto   = document.getElementById('btnAutoPlay');
+    const btnNext   = document.getElementById('btnNextStep');
+    const btnReset  = document.getElementById('btnReset');
+
+    switch (mode) {
+      case 'ready':
+        btnGen.disabled   = false;
+        btnAuto.disabled  = false;
+        btnNext.disabled  = false;
+        btnReset.disabled = false;
+        break;
+      case 'running':
+        btnGen.disabled   = true;
+        btnAuto.disabled  = false;
+        btnNext.disabled  = false;
+        btnReset.disabled = false;
+        break;
+      case 'done':
+        btnGen.disabled   = false;
+        btnAuto.disabled  = true;
+        btnNext.disabled  = true;
+        btnReset.disabled = false;
+        break;
+      case 'init':
+        btnGen.disabled   = false;
+        btnAuto.disabled  = true;
+        btnNext.disabled  = true;
+        btnReset.disabled = true;
+        break;
+    }
+  }
+
+  function init() {
+    // Algorithm tabs
+    document.querySelectorAll('.algo-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        if (State.isRunning) return;
+        document.querySelectorAll('.algo-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        State.algorithm = tab.dataset.algo;
+        updateAlgoTitle();
+        if (State.array.length > 0) generateArray(); // regenerate on algo switch
+      });
+    });
+
+    // Size slider
+    const sizeSlider = document.getElementById('sizeSlider');
+    const sizeVal = document.getElementById('sizeVal');
+    sizeSlider.addEventListener('input', () => {
+      State.arraySize = +sizeSlider.value;
+      sizeVal.textContent = State.arraySize;
+      updateSliderFill(sizeSlider);
+    });
+
+    // Speed slider
+    const speedSlider = document.getElementById('speedSlider');
+    const speedVal = document.getElementById('speedVal');
+    speedSlider.addEventListener('input', () => {
+      State.speed = +speedSlider.value;
+      speedVal.textContent = SPEED_LABELS[State.speed];
+      updateSliderFill(speedSlider);
+      // If auto-playing, restart with new speed
+      if (State.isAutoPlay) {
+        Executor.clearAutoPlay();
+        State.isAutoPlay = true;
+        document.getElementById('btnAutoPlay').classList.add('active');
+        Executor.startAutoPlay();
+      }
+    });
+
+    // Initialize slider fills
+    updateSliderFill(sizeSlider);
+    updateSliderFill(speedSlider);
+
+    // Buttons
+    document.getElementById('btnGenerate').addEventListener('click', generateArray);
+
+    document.getElementById('btnAutoPlay').addEventListener('click', () => {
+      if (!State.isRunning) {
+        // First press starts the sort in auto mode
+        startSort(true);
+      } else {
+        Executor.toggleAutoPlay();
+      }
+    });
+
+    document.getElementById('btnNextStep').addEventListener('click', () => {
+      if (!State.isRunning) {
+        startSort(false);
+      } else {
+        if (State.isAutoPlay) {
+          Executor.clearAutoPlay();
+        }
+        Executor.processStep();
+      }
+    });
+
+    document.getElementById('btnReset').addEventListener('click', resetSort);
+
+    setButtonStates('init');
+  }
+
+  function updateSliderFill(slider) {
+    const min = +slider.min, max = +slider.max, val = +slider.value;
+    const pct = ((val - min) / (max - min)) * 100;
+    slider.style.setProperty('--pct', `${pct}%`);
+  }
+
+  return { init, setButtonStates };
+})();
+
+// ─────────────────────────────────────────────────────────────
+// CORE FUNCTIONS
+// ─────────────────────────────────────────────────────────────
+
+/** Generate a new random array and reset everything */
+function generateArray() {
+  resetSort(true);
+
+  const size = State.arraySize;
+  // Create shuffled array with nice distribution
+  State.array = Array.from({ length: size }, (_, i) =>
+    Math.floor(8 + ((i + 1) / size) * 92 + (Math.random() - 0.5) * 30)
+  ).sort(() => Math.random() - 0.5);
+
+  // Clamp values
+  State.array = State.array.map(v => Math.max(5, Math.min(100, v)));
+
+  State.sortedIndices.clear();
+  State.comparisons = 0;
+  State.swaps = 0;
+  State.stepNumber = 0;
+
+  document.getElementById('cmpCount').textContent = '0';
+  document.getElementById('swpCount').textContent = '0';
+  document.getElementById('stepDisplay').textContent = '0';
+
+  updateVarTracker({ i: null, j: null, pivot: null, minIdx: null, n: size, swaps: 0 });
+  document.getElementById('val-n').textContent = size;
+
+  Renderer.buildBars(State.array);
+  setStatus('idle', `Array of ${size} elements ready. Press AUTO-PLAY or NEXT STEP.`);
+  UI.setButtonStates('ready');
+
+  // Initialize generator (but don't start)
+  const arrCopy = [...State.array];
+  switch (State.algorithm) {
+    case 'bubble':    State.generatorInstance = bubbleSortGen(arrCopy); break;
+    case 'selection': State.generatorInstance = selectionSortGen(arrCopy); break;
+    case 'quick':     State.generatorInstance = quickSortGen(arrCopy); break;
+  }
+  // Keep State.array in sync with the copy the generator mutates
+  State.array = arrCopy;
+}
+
+/** Begin execution (auto or manual first step) */
+function startSort(auto) {
+  if (State.isRunning) return;
+  State.isRunning = true;
+  Timer.start();
+  setStatus('running', `Running ${State.algorithm.charAt(0).toUpperCase() + State.algorithm.slice(1)} Sort…`);
+  UI.setButtonStates('running');
+
+  if (auto) {
+    State.isAutoPlay = true;
+    document.getElementById('btnAutoPlay').classList.add('active');
+    document.getElementById('btnAutoPlay').innerHTML = '<span class="dot"></span> PAUSE';
+    Executor.startAutoPlay();
+  } else {
+    Executor.processStep();
+  }
+}
+
+/** Reset to pre-sort state (keep array if keepArray=true) */
+function resetSort(keepArray = false) {
+  Executor.clearAutoPlay();
+  Timer.stop();
+  Timer.reset();
+
+  State.isRunning = false;
+  State.isAutoPlay = false;
+  State.generatorInstance = null;
+  State.sortedIndices.clear();
+
+  document.getElementById('btnAutoPlay').classList.remove('active');
+  document.getElementById('btnAutoPlay').innerHTML = '<span class="dot"></span> AUTO-PLAY';
+
+  if (!keepArray) {
+    setStatus('idle', 'Reset. Generate a new array to continue.');
+    // Clear log
+    document.getElementById('logBody').innerHTML =
+      `<div class="log-entry latest"><span class="log-step">#0</span><span class="log-msg">Reset — ready for new sort.</span></div>`;
+    Renderer.resetVisuals();
+    UI.setButtonStates(State.array.length > 0 ? 'ready' : 'init');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// BOOT
+// ─────────────────────────────────────────────────────────────
+UI.init();
+updateAlgoTitle();
+
+// Auto-generate on load
+setTimeout(generateArray, 300);
+</script>
+</body>
+</html>
